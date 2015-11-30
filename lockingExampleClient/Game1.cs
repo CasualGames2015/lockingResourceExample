@@ -19,6 +19,8 @@ namespace lockingExampleClient
         List<SimpleSprite> _collectables = new List<SimpleSprite>();
 
         public bool Started = false;
+        private SpriteFont font;
+        private bool Ended;
 
         public Game1()
         {
@@ -35,15 +37,36 @@ namespace lockingExampleClient
         protected override void Initialize()
         {
             // TODO: Add your initialization logic here
+            IsMouseVisible = true;
             connection = new HubConnection("http://localhost:5366/");
             proxy = connection.CreateHubProxy("exclusiveGameHub");
+
             connection.StateChanged += Connection_StateChanged;
+
+            // Deal with the Message when a client joins the game
             proxy.On<int, int>("createOpponentCollectable", (x, y) =>
             {
                 _collectables.Add(new SimpleSprite(
                     Content.Load<Texture2D>("collectable"), new Vector2(x, y)));
             });
-            connection.Start().Wait();
+            // Message recieved for removing a collectable from the collection in this client
+            // It has alread been removed form the calling client which gave rise to this message
+            proxy.On<int, int>("removed", (x, y) =>
+            {
+                // Safe pattern for retrieving the one to be removed
+              var removed =  _collectables.Find(c => (int)c.Position.X == x && c.Position.Y == y);
+                // if it's right remove it
+                if (removed != null)
+                    _collectables.Remove(removed);
+            });
+
+            proxy.On("end", () =>
+            {
+                // Can't access Exit() method directly as that would be cross thread
+                Ended = true;
+            });
+
+            connection.Start();
             base.Initialize();
         }
 
@@ -51,6 +74,7 @@ namespace lockingExampleClient
 
         private void Connection_StateChanged(StateChange State)
         {
+            // Wait for a connection and start if we have connected
             if(State.NewState == ConnectionState.Connected )
             {
                 Started = true;
@@ -65,7 +89,7 @@ namespace lockingExampleClient
         {
             // Create a new SpriteBatch, which can be used to draw textures.
             spriteBatch = new SpriteBatch(GraphicsDevice);
-
+            font = Content.Load<SpriteFont>("font");
             // TODO: use this.Content to load your game content here
         }
 
@@ -87,7 +111,27 @@ namespace lockingExampleClient
         {
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
+
+            // if all the collectables are collected then the server will send a message and Ended will be true
+            if (Ended) this.Exit();
             
+            // Check for Mouse clicks
+            foreach (var item in _collectables)
+                item.Update(gameTime);
+
+            // if for newly clicked collectable(s)
+            var deleted = _collectables.FindAll(c => c.Visible == false);
+            // safe delete from the collectables in this thread
+            // Note you cannot remove from a generic collection (Lists, stacks, Dictionaries etc) while you are iterating 
+            // remove the items marked for deletion NOTE: visible used here
+            foreach (var item in deleted)
+            { 
+                // Safely remove in this thread
+                _collectables.Remove(item);
+                // Tell the server to remove that one from it's own collection and in turn tell all the other clients to remove it
+                // from their collections
+                proxy.Invoke("remove", new object[] { (int)item.Position.X, (int)item.Position.Y });
+            }
             // TODO: Add your update logic here
 
             base.Update(gameTime);
@@ -101,6 +145,9 @@ namespace lockingExampleClient
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
             spriteBatch.Begin();
+            if (!Started)
+                spriteBatch.DrawString(font, "Waiting for Server Connection",new Vector2(10,10),Color.White);
+
             // TODO: Add your drawing code here
             foreach (var item in _collectables)
                 {

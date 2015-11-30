@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Input;
 
 namespace Sprites
 {
@@ -33,6 +34,18 @@ namespace Sprites
         {
             if(Visible)
                 sp.Draw(Image, Position, Color.White);
+        }
+
+        public void Update(GameTime gameTime)
+        {
+            MouseState mState = Mouse.GetState();
+            if(mState.LeftButton == ButtonState.Pressed)
+            {
+                if(BoundingRect.Contains(mState.Position))
+                {
+                    Visible = false;
+                }
+            }
         }
 
         public void Move(Vector2 delta)
