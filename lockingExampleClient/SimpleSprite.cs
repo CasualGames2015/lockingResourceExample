@@ -12,8 +12,20 @@ namespace Sprites
     {
         public Texture2D Image;
         public Vector2 Position;
-        public Rectangle BoundingRect;
+        private Rectangle boundingRect;
         public bool Visible = true;
+        public bool Moving = false;
+        public Vector2 Target;
+
+        public Rectangle BoundingRect
+        {
+            get
+            {
+                return new Rectangle((int)Position.X, (int)Position.Y,
+                Image.Width, Image.Height); ;
+            }
+            
+        }
 
         // Constructor epects to see a loaded Texture
         // and a start position
@@ -23,11 +35,8 @@ namespace Sprites
             // Take a copy of the texture passed down
             Image = spriteImage;
             // Take a copy of the start position
-            Position = startPosition;
+            Target = Position = startPosition;
             // Calculate the bounding rectangle
-            BoundingRect = new Rectangle((int)startPosition.X, (int)startPosition.Y, 
-                Image.Width, Image.Height);
-
         }
 
         public void draw(SpriteBatch sp)
@@ -46,14 +55,29 @@ namespace Sprites
                     Visible = false;
                 }
             }
+            float distance = Vector2.Distance(Target,Position);
+
+            if (Moving && Visible && distance > 0.1f)
+            {
+                Position = Vector2.Lerp(Position, Target, 0.01f);
+            }
+            else
+            {
+                Position = Target;
+                Moving = false;
+            }
         }
+
+        public void startMove(int x, int y)
+        {
+            Moving = true;
+            Target = new Vector2(x, y);
+        }
+
 
         public void Move(Vector2 delta)
         {
             Position += delta;
-            BoundingRect = new Rectangle((int)Position.X, (int)Position.Y, Image.Width, Image.Height);
-            BoundingRect.X = (int)Position.X;
-            BoundingRect.Y = (int)Position.Y;
         }
     }
 }

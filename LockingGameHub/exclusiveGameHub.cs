@@ -50,6 +50,14 @@ public class exclusiveGameHub : Hub
             return base.OnConnected();
         }
 
+        public void moveTowards()
+        {
+            Random r = new Random();
+            int x = r.Next(640);
+            int y = r.Next(480);
+            Clients.All.moveTo(x, y);
+        }
+
         public void remove(int x, int y)
         {
             Clients.Others.removed(x, y);

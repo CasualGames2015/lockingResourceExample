@@ -17,7 +17,7 @@ namespace lockingExampleClient
         IHubProxy proxy;
         HubConnection connection;
         List<SimpleSprite> _collectables = new List<SimpleSprite>();
-
+        KeyboardState previous;
         public bool Started = false;
         private SpriteFont font;
         private bool Ended;
@@ -66,6 +66,12 @@ namespace lockingExampleClient
                 Ended = true;
             });
 
+            proxy.On<int, int>("moveTo", (x, y) =>
+            {
+                foreach (var item in _collectables)
+                    item.startMove(x, y);
+            });
+
             connection.Start();
             base.Initialize();
         }
@@ -111,10 +117,15 @@ namespace lockingExampleClient
         {
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
-
+            
             // if all the collectables are collected then the server will send a message and Ended will be true
             if (Ended) this.Exit();
-            
+            KeyboardState kState = Keyboard.GetState();
+            if (previous.IsKeyDown(Keys.Space) && kState.IsKeyUp(Keys.Space))
+                {
+                proxy.Invoke("moveTowards");
+                }
+            previous = kState;
             // Check for Mouse clicks
             foreach (var item in _collectables)
                 item.Update(gameTime);
