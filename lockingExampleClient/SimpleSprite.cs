@@ -10,12 +10,14 @@ namespace Sprites
 {
     public class SimpleSprite
     {
+        public string Id;
         public Texture2D Image;
         public Vector2 Position;
         private Rectangle boundingRect;
         public bool Visible = true;
         public bool Moving = false;
         public Vector2 Target;
+        public float speed = 5f;
 
         public Rectangle BoundingRect
         {
@@ -29,9 +31,10 @@ namespace Sprites
 
         // Constructor epects to see a loaded Texture
         // and a start position
-        public SimpleSprite(Texture2D spriteImage,
+        public SimpleSprite(string id,Texture2D spriteImage,
                             Vector2 startPosition)
         {
+            Id = id;
             // Take a copy of the texture passed down
             Image = spriteImage;
             // Take a copy of the start position
@@ -55,15 +58,13 @@ namespace Sprites
                     Visible = false;
                 }
             }
-            float distance = Vector2.Distance(Target,Position);
-
-            if (Moving && Visible && distance > 0.1f)
+            if (Moving && Visible && Vector2.Distance(Target, Position) > 0)
             {
-                Position = Vector2.Lerp(Position, Target, 0.01f);
+                Vector2 direction = Vector2.Normalize(Target - Position);
+                Position += direction * speed;
             }
             else
             {
-                Position = Target;
                 Moving = false;
             }
         }

@@ -44,17 +44,18 @@ namespace lockingExampleClient
             connection.StateChanged += Connection_StateChanged;
 
             // Deal with the Message when a client joins the game
-            proxy.On<int, int>("createOpponentCollectable", (x, y) =>
+            proxy.On<string,int, int>("createOpponentCollectable", (id,x, y) =>
             {
-                _collectables.Add(new SimpleSprite(
+                _collectables.Add(new SimpleSprite(id,
                     Content.Load<Texture2D>("collectable"), new Vector2(x, y)));
+                
             });
             // Message recieved for removing a collectable from the collection in this client
             // It has alread been removed form the calling client which gave rise to this message
-            proxy.On<int, int>("removed", (x, y) =>
+            proxy.On<string>("removed", (string id) =>
             {
                 // Safe pattern for retrieving the one to be removed
-              var removed =  _collectables.Find(c => (int)c.Position.X == x && c.Position.Y == y);
+              var removed =  _collectables.Find(c => c.Id == id);
                 // if it's right remove it
                 if (removed != null)
                     _collectables.Remove(removed);
@@ -141,7 +142,7 @@ namespace lockingExampleClient
                 _collectables.Remove(item);
                 // Tell the server to remove that one from it's own collection and in turn tell all the other clients to remove it
                 // from their collections
-                proxy.Invoke("remove", new object[] { (int)item.Position.X, (int)item.Position.Y });
+                proxy.Invoke("remove", new object[] { item.Id });
             }
             // TODO: Add your update logic here
 
